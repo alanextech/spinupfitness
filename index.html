@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WorkoutWhirl</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      background: #f4f4f4;
+      padding: 2rem;
+    }
+    h1 {
+      color: #333;
+      position: relative;
+      margin-bottom: 0.5rem;
+    }
+    #pointer {
+      width: 0;
+      height: 0;
+      border-left: 15px solid transparent;
+      border-right: 15px solid transparent;
+      border-top: 20px solid red;
+      margin: 0 auto;
+      margin-top: 0.5rem;
+      margin-bottom: 1rem;
+    }
+    #wheel-container {
+      margin: 2rem auto;
+      position: relative;
+      width: 320px;
+      height: 320px;
+    }
+    #wheelCanvas {
+      width: 100%;
+      height: 100%;
+    }
+    #spinBtn {
+      margin-top: 2rem;
+      padding: 1rem 2rem;
+      font-size: 1.2rem;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    #result {
+      margin-top: 1.5rem;
+      font-size: 1.2rem;
+      color: #333;
+    }
+    canvas.confetti-canvas {
+      position: fixed;
+      pointer-events: none;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 999;
+    }
+  </style>
+</head>
+<body>
+  <h1>WorkoutWhirl</h1>
+  <div id="pointer"></div>
+  <div id="wheel-container">
+    <canvas id="wheelCanvas" width="320" height="320"></canvas>
+  </div>
+  <button id="spinBtn">Spin the Wheel</button>
+  <div id="result"></div>
+  <audio id="spinSound" src="https://cdn.pixabay.com/download/audio/2022/03/15/audio_1d8f4cd37e.mp3?filename=wheel-spin-1-98243.mp3"></audio>
+  <canvas class="confetti-canvas" id="confetti-canvas"></canvas>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
+  <script>
+    const workouts = [
+      "20 Jumping Jacks",
+      "15 Push-ups",
+      "30s Plank",
+      "20 Squats",
+      "15 Sit-ups",
+      "10 Burpees",
+      "30s High Knees",
+      "20 Mountain Climbers",
+      "15 Lunges (each leg)",
+      "30s Jump Rope (in place)"
+    ];
+
+    const colors = [
+      "#FF0000", "#FF7F00", "#FFFF00", "#00FF00", "#0000FF",
+      "#8B00FF", "#800000", "#008080", "#00CED1", "#FFD700"
+    ];
+
+    const canvas = document.getElementById("wheelCanvas");
+    const ctx = canvas.getContext("2d");
+    const spinBtn = document.getElementById("spinBtn");
+    const result = document.getElementById("result");
+    const spinSound = document.getElementById("spinSound");
+    const radius = canvas.width / 2;
+
+    let currentAngle = 0;
+    let isSpinning = false;
+
+    function drawWheel() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      const angleStep = 2 * Math.PI / workouts.length;
+      for (let i = 0; i < workouts.length; i++) {
+        const startAngle = i * angleStep;
+        const endAngle = startAngle + angleStep;
+        ctx.beginPath();
+        ctx.moveTo(radius, radius);
+        ctx.arc(radius, radius, radius, startAngle, endAngle);
+        ctx.fillStyle = colors[i % colors.length];
+        ctx.fill();
+        ctx.save();
+        ctx.translate(radius, radius);
+        ctx.rotate(startAngle + angleStep / 2);
+        ctx.textAlign = "right";
+        ctx.fillStyle = "#000";
+        ctx.font = "bold 12px Arial";
+        ctx.fillText(workouts[i], radius - 10, 5);
+        ctx.restore();
+      }
+    }
+
+    function rotateWheel(targetAngle, index) {
+      const fullRotations = Math.floor(Math.random() * 7) + 4; // 4 to 10
+      const totalAngle = fullRotations * 360 + targetAngle;
+      const duration = 4000;
+      const start = performance.now();
+      const initialAngle = currentAngle;
+
+      function animate(time) {
+        const elapsed = time - start;
+        const progress = Math.min(elapsed / duration, 1);
+        currentAngle = initialAngle + (totalAngle - initialAngle) * easeOutCubic(progress);
+        canvas.style.transform = `rotate(${currentAngle % 360}deg)`;
+        if (progress < 1) requestAnimationFrame(animate);
+        else finishSpin(index);
+      }
+
+      requestAnimationFrame(animate);
+    }
+
+    function easeOutCubic(t) {
+      return (--t) * t * t + 1;
+    }
+
+    function finishSpin(index) {
+      result.textContent = `Your workout: ${workouts[index]}`;
+      confetti({
+        particleCount: 100,
+        spread: 70,
+        origin: { y: 0.6 }
+      });
+      isSpinning = false;
+    }
+
+    drawWheel();
+
+    spinBtn.addEventListener("click", () => {
+      if (isSpinning) return;
+      isSpinning = true;
+      result.textContent = "";
+      spinSound.currentTime = 0;
+      spinSound.play();
+      const segmentAngle = 360 / workouts.length;
+      const randomIndex = Math.floor(Math.random() * workouts.length);
+      const targetAngle = 270 - (randomIndex * segmentAngle + segmentAngle / 2);
+      rotateWheel(targetAngle, randomIndex);
+    });
+  </script>
+</body>
+</html>
